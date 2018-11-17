@@ -1,7 +1,5 @@
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,13 +11,13 @@ import java.util.*;
 
 public class FoodTruckFinder {
     static int limit = 10;
-    static int offset = 10;
+    static int offset = 0;
     static String sourceURL = "https://data.sfgov.org/resource/bbb8-hzi6.json";
+    static boolean endOfResult = false;
 
-    private static String getUrlWithPage(int page) {
-        int currOffset = 0;
-        if(page > 0) currOffset = (page - 1) * offset;
-        String urlStr = sourceURL + "?$limit=" + limit + "&$offset=" + currOffset +"&dayofweekstr=";
+    private static String getUrlWithPage() {
+        offset = limit + offset;
+        String urlStr = sourceURL + "?$limit=" + limit + "&$offset=" + offset +"&dayofweekstr=";
         Calendar c = Calendar.getInstance();
         int day_of_week = c.get(Calendar.DAY_OF_WEEK);
         switch (day_of_week) {
@@ -40,6 +38,9 @@ public class FoodTruckFinder {
                 break;
             case Calendar.FRIDAY:
                 urlStr += "Friday";
+                break;
+            case Calendar.SATURDAY:
+                urlStr += "Saturday";
                 break;
         }
         return urlStr;
@@ -63,10 +64,41 @@ public class FoodTruckFinder {
         return result.toString();
     }
 
-    public static void promptEnterKey() {
+    private static List<FoodTruck> fetchTrucks() {
+        String url = getUrlWithPage();
+        String jsonStr = getContent(url);
+        List<FoodTruck> trucks = parseJSON(jsonStr);
+       return trucks;
+    }
+
+    public static void fetchNext() {
         try {
-            System.out.println("Press \"ENTER\" to see next 10 results...");
-            System.in.read();
+            int needed = 10;
+            List<FoodTruck> trucks = new ArrayList<>();
+            while (trucks.size() != 10 && !endOfResult) {
+                List<FoodTruck> fetched = fetchTrucks();
+                trucks.addAll(fetched);
+                int size = fetched.size();
+                needed -= size;
+                limit = needed;
+            }
+            // reset limit to 10
+            limit = 10;
+            if(trucks.size() > 0) {
+                Collections.sort(trucks, new Comparator<FoodTruck>() {
+                    @Override
+                    public int compare(FoodTruck t1, FoodTruck t2) {
+                        return t1.getName().compareTo(t2.getName());
+                    }
+                });
+                System.out.println("Name:                   Address: ");
+                for(FoodTruck t : trucks) {
+                    System.out.println(t.getName() + ",    " + t.getAddress());
+                }
+                System.out.println("Press ENTER to see next...");
+                System.in.read(new byte[1]);
+                fetchNext();
+            }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
@@ -78,42 +110,27 @@ public class FoodTruckFinder {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(jsonStr);
             Iterator<JsonNode> childIterator = root.elements();
+            if(!childIterator.hasNext()) endOfResult = true;
             while (childIterator.hasNext()) {
                 JsonNode node = childIterator.next();
                 FoodTruck truck = new FoodTruck();
                 Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
                 while (fieldsIterator.hasNext()) {
                     Map.Entry<String, JsonNode> field = fieldsIterator.next();
-                    if(field.getKey().equals("applicant")) truck.setName(field.getValue().toString());
-                    else if(field.getKey().equals("location")) truck.setAddress(field.getValue().toString());
-                    else if(field.getKey().equals("start24")) truck.setStart24(field.getValue().toString());
-                    else if(field.getKey().equals("end24")) truck.setEnd24(field.getValue().toString());
+                    if(field.getKey().equals("applicant")) truck.setName(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("location")) truck.setAddress(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("start24")) truck.setStart24(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("end24")) truck.setEnd24(field.getValue().toString().replace("\"", ""));
                 }
-                trucks.add(truck);
+                if(truck.isOpen()) trucks.add(truck);
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
         return trucks;
     }
+
     public static void main(String[] args) {
-        int count = 0;
-        String url = getUrlWithPage(count);
-        String jsonStr = getContent(url);
-        List<FoodTruck> trucks = parseJSON(jsonStr);
-        Collections.sort(trucks, new Comparator<FoodTruck>() {
-            @Override
-            public int compare(FoodTruck t1, FoodTruck t2) {
-                return t1.getName().compareTo(t2.getName());
-            }
-        });
-        System.out.println("Name: " + "Address: ");
-        for(FoodTruck t : trucks) {
-            System.out.println(t.getName() + "," + t.getAddress());
-        }
-
-
+        fetchNext();
     }
-
-
 }
