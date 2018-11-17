@@ -10,12 +10,15 @@ import java.util.*;
 
 
 public class FoodTruckFinder {
+    // the result size per single fetch
     static int limit = 10;
+    // the beginning index of the data
     static int offset = 0;
     static String sourceURL = "https://data.sfgov.org/resource/bbb8-hzi6.json";
+    // flag to check if API returns any more data
     static boolean endOfResult = false;
 
-    private static String getUrlWithPage() {
+    private static String getUrl() {
         offset = limit + offset;
         String urlStr = sourceURL + "?$limit=" + limit + "&$offset=" + offset +"&dayofweekstr=";
         Calendar c = Calendar.getInstance();
@@ -64,14 +67,40 @@ public class FoodTruckFinder {
         return result.toString();
     }
 
+    private static List<FoodTruck> parseJSON(String jsonStr) {
+        List<FoodTruck> trucks = new ArrayList<>();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(jsonStr);
+            Iterator<JsonNode> childIterator = root.elements();
+            if(!childIterator.hasNext()) endOfResult = true;
+            while (childIterator.hasNext()) {
+                JsonNode node = childIterator.next();
+                FoodTruck truck = new FoodTruck();
+                Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
+                while (fieldsIterator.hasNext()) {
+                    Map.Entry<String, JsonNode> field = fieldsIterator.next();
+                    if(field.getKey().equals("applicant")) truck.setName(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("location")) truck.setAddress(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("start24")) truck.setStart24(field.getValue().toString().replace("\"", ""));
+                    else if(field.getKey().equals("end24")) truck.setEnd24(field.getValue().toString().replace("\"", ""));
+                }
+                if(truck.isOpen()) trucks.add(truck);
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        return trucks;
+    }
+
     private static List<FoodTruck> fetchTrucks() {
-        String url = getUrlWithPage();
+        String url = getUrl();
         String jsonStr = getContent(url);
         List<FoodTruck> trucks = parseJSON(jsonStr);
        return trucks;
     }
 
-    public static void fetchNext() {
+    private static void fetchNext() {
         try {
             int needed = 10;
             List<FoodTruck> trucks = new ArrayList<>();
@@ -102,32 +131,6 @@ public class FoodTruckFinder {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-    }
-
-    private static List<FoodTruck> parseJSON(String jsonStr) {
-        List<FoodTruck> trucks = new ArrayList<>();
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(jsonStr);
-            Iterator<JsonNode> childIterator = root.elements();
-            if(!childIterator.hasNext()) endOfResult = true;
-            while (childIterator.hasNext()) {
-                JsonNode node = childIterator.next();
-                FoodTruck truck = new FoodTruck();
-                Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
-                while (fieldsIterator.hasNext()) {
-                    Map.Entry<String, JsonNode> field = fieldsIterator.next();
-                    if(field.getKey().equals("applicant")) truck.setName(field.getValue().toString().replace("\"", ""));
-                    else if(field.getKey().equals("location")) truck.setAddress(field.getValue().toString().replace("\"", ""));
-                    else if(field.getKey().equals("start24")) truck.setStart24(field.getValue().toString().replace("\"", ""));
-                    else if(field.getKey().equals("end24")) truck.setEnd24(field.getValue().toString().replace("\"", ""));
-                }
-                if(truck.isOpen()) trucks.add(truck);
-            }
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-        return trucks;
     }
 
     public static void main(String[] args) {
