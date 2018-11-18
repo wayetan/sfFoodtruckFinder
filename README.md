@@ -1,7 +1,7 @@
 # SF Foodtruck Finder
 This program is used to get current open food trucks using San Francisco government’s API. 
 User could see 10 trucks per single ENTER prompt based on current date/time.
-## Installation
+## Installation:
 To use this as a command line program, make sure current folder is /src, and run: 
 ```
 javac -cp ../lib/jackson-core-2.9.7.jar:../lib/jackson-databind-2.9.7.jar:../lib/jackson-annotations-2.9.7.jar FoodTruckFinder.java FoodTruck.java
@@ -18,5 +18,5 @@ Next state: limit = 4 since 4 more trucks needed, and so on..
 
 The downside of this implementation is when most of the trucks is not valid, and it will keep calling the api until the result set size is achieved. It'll be implemented better if with a local storage solution. 
 
-## Extend to Full-scale Web Application.
+## Extend to Full-scale Web Application:
 If it's going to be used for a full scale web application, data is better to be stored in a local database or cache for multiple "GET"(read) requests and avoid calling API multiple times. It's more like a fetch-and-store solution. The focus would be more on how to synchronize the database with live data with a "window". The size of the window could be daily, weekly, monthly based on local database storage. Accordingly, update the database every day/week/month. 
