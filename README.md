@@ -9,7 +9,7 @@ This program is used to get current open food trucks using San Francisco governm
 
 User could see 10 trucks per single ENTER prompt based on current date/time. 
 
-The program use lazy fetch mechanism by calling api using "limit=?" and "offset=?" to make sure the data is fetched only by user request.
+The program use lazy fetch mechanism by calling api using "limit=?" and "offset=?" to make sure the data is fetched only by user request. Further more, the result page is trimmed for exact 10 results every time. Since not all the result returned by API are going to be valid, if not valid, fetch more until the size is achieved. 
 
 For a command line program, it's a fetch-as-needed single thread solution and not involved with local database.
 
